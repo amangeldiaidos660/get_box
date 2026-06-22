@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, status
 
-from app.schemas.cells import CommandAcceptedResponse, CommandStatusResponse, OpenCellRequest
+from app.schemas.cells import CommandAcceptedResponse, CommandStatusResponse, CommandStatusUpdateRequest, OpenCellRequest
 from app.services.command_store import command_store
 
 router = APIRouter(prefix="/cells", tags=["cells"])
@@ -29,12 +29,20 @@ def get_command_status(request_id: str) -> CommandStatusResponse:
     if record is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Command not found")
 
-    return CommandStatusResponse(
-        request_id=record.request_id,
-        box_id=record.box_id,
-        controller_id=record.controller_id,
-        cell_id=record.cell_id,
-        status=record.status,
-        action=record.action,
-        duration_ms=record.duration_ms,
+    return CommandStatusResponse(**record.snapshot())
+
+
+@router.post("/commands/{request_id}/status", response_model=CommandStatusResponse)
+def update_command_status(request_id: str, payload: CommandStatusUpdateRequest) -> CommandStatusResponse:
+    record = command_store.update_status(
+        request_id,
+        payload.status,
+        message=payload.message,
+        error_code=payload.error_code,
+        door_state=payload.door_state,
+        duration_ms=payload.duration_ms,
     )
+    if record is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Command not found")
+
+    return CommandStatusResponse(**record.snapshot())

@@ -35,3 +35,10 @@ Run the app:
 ```powershell
 uvicorn app.main:app --reload
 ```
+
+
+## Board configs
+
+Board: ESP32 Dev Module (ESP32 by Espressif Systems.)
+
+Port: COM7 Serial Port (USB)

@@ -21,6 +21,13 @@ Mosquitto выполняет только две функции:
 тот и получает сообщение.
 ```
 
+## Правило корреляции команд
+
+- FastAPI создает `request_id`.
+- ESP32 возвращает тот же `request_id` во всех сообщениях по одной команде.
+- FastAPI использует `request_id` для отслеживания жизненного цикла команды.
+- Все сообщения, относящиеся к одной команде, публикуются в пределах одного `cell`-контроллера и одного `box_id`.
+
 ---
 
 # Общая структура MQTT Topics
@@ -61,6 +68,14 @@ getbox/{box_id}/{controller_type}/{controller_id}/{channel}
 | `event` | События |
 | `heartbeat` | Проверка доступности |
 | `error` | Ошибки устройства |
+
+## Семантика каналов для GetBox
+
+- `cmd` используется FastAPI для отправки управляющей команды.
+- `status` используется ESP32 для ответа на команду и сообщения о переходах состояния.
+- `event` используется ESP32 для событий двери, включая штатное открытие и возможное вскрытие.
+- `error` используется ESP32 для ошибок устройства и ошибок сценария.
+- `heartbeat` используется ESP32 для периодического сигнала доступности.
 
 ---
 
@@ -119,11 +134,35 @@ getbox/box_003/device/ctrl_02/error
 | Topic | Кто публикует | Кто подписывается | Назначение |
 |---|---|---|---|
 | `getbox/{box_id}/cell/{controller_id}/cmd` | FastAPI | ESP32 Cell Controller | Команды управления ячейками |
-| `getbox/{box_id}/cell/{controller_id}/status` | ESP32 Cell Controller | FastAPI | Ответы по командам и текущее состояние |
-| `getbox/{box_id}/cell/{controller_id}/event` | ESP32 Cell Controller | FastAPI | События открытия, закрытия и взлома |
+| `getbox/{box_id}/cell/{controller_id}/status` | ESP32 Cell Controller | FastAPI | Ответы по командам и переходы состояний по `request_id` |
+| `getbox/{box_id}/cell/{controller_id}/event` | ESP32 Cell Controller | FastAPI | События открытия, закрытия и возможного вскрытия |
 | `getbox/{box_id}/sensors/{controller_id}/status` | ESP32 Sensors Controller | FastAPI | Данные DHT11 |
 | `getbox/{box_id}/device/{controller_id}/heartbeat` | ESP32 | FastAPI | Информация о доступности устройства |
-| `getbox/{box_id}/device/{controller_id}/error` | ESP32 | FastAPI | Ошибки работы устройства |
+| `getbox/{box_id}/device/{controller_id}/error` | ESP32 | FastAPI | Ошибки работы устройства и сценария |
+
+## Обязательные поля командного контура
+
+Для всех сообщений, связанных с выполнением команды открытия ячейки, обязательны:
+
+- `request_id`
+- `box_id`
+- `controller_id`
+- `cell_id`
+
+Для `cmd` дополнительно требуется:
+
+- `action`
+- `duration_ms`
+
+Для `status` дополнительно требуется:
+
+- `status`
+- `message` или `error_code`, если это ошибка
+
+Для `event` дополнительно требуется:
+
+- `event`
+- `door_state`, если событие связано с положением двери
 
 ---
 
@@ -148,6 +187,15 @@ getbox/box_003/cell/ctrl_02/cmd
 
 Таким образом устройство получает только те команды, которые относятся непосредственно к нему.
 
+ESP32 Cell Controller также публикует в:
+
+```text
+getbox/box_003/cell/ctrl_02/status
+getbox/box_003/cell/ctrl_02/event
+getbox/box_003/device/ctrl_02/heartbeat
+getbox/box_003/device/ctrl_02/error
+```
+
 ---
 
 # Подписки FastAPI
@@ -162,6 +210,8 @@ getbox/+/+/+/event
 getbox/+/device/+/heartbeat
 getbox/+/device/+/error
 ```
+
+FastAPI использует `request_id` для связывания входящих `status`, `event` и `error` сообщений с конкретной командой.
 
 ---
 
@@ -244,7 +294,9 @@ FastAPI выполняет следующие действия:
 
 7. Выполняет действие.
 
-8. Отправляет статус обратно.
+8. Отправляет статус обратно с тем же `request_id`.
+
+9. Переходит к следующему статусу или ошибке в рамках того же `request_id`.
 ```
 
 ---

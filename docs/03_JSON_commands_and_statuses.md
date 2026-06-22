@@ -229,6 +229,7 @@ getbox/{box_id}/cell/{controller_id}/event
 
 ```json
 {
+    "request_id": "req_12345",
     "box_id": "box_003",
     "controller_id": "ctrl_02",
     "cell_id": 6,
@@ -245,6 +246,7 @@ getbox/{box_id}/cell/{controller_id}/event
 
 ```json
 {
+    "request_id": "req_12345",
     "box_id": "box_003",
     "controller_id": "ctrl_02",
     "cell_id": 6,
@@ -260,6 +262,7 @@ getbox/{box_id}/cell/{controller_id}/event
 
 ```json
 {
+    "request_id": "req_12345",
     "box_id": "box_003",
     "controller_id": "ctrl_02",
     "cell_id": 6,

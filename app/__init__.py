@@ -1,0 +1,1 @@
+"""GetBox FastAPI application package."""

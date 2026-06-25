@@ -1,5 +1,7 @@
 #include <Arduino.h>
 
+#include "cell_config.h"
+#include "cell_controller.h"
 #include "firmware_variables.h"
 #include "wifi_connection.h"
 #include "mqtt_topics.h"
@@ -40,6 +42,8 @@ void printFirmwareConfiguration() {
 
     Serial.print("Error topic: ");
     Serial.println(mqttErrorTopic());
+
+    printCellMap();
 }
 
 void setup() {
@@ -47,6 +51,7 @@ void setup() {
     delay(1000);
 
     printFirmwareConfiguration();
+    initializeCellHardware();
     configureMqtt();
 
     if (connectToWiFi()) {
@@ -56,14 +61,17 @@ void setup() {
 }
 
 void loop() {
+    // GPIO и таймеры должны работать даже без Wi-Fi/MQTT.
+    maintainCells(mqttClient);
+
     if (!ensureWiFiConnection()) {
-        delay(50);
+        delay(10);
         return;
     }
 
     if (!isSystemTimeValid()) {
         if (!synchronizeSystemTime()) {
-            delay(50);
+            delay(10);
             return;
         }
     }

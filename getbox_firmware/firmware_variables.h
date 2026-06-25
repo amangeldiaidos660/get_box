@@ -10,7 +10,7 @@ constexpr char WIFI_PASSWORD[] = "ILoveAlmaU2024!";
 
 // Optional firmware metadata.
 constexpr char DEVICE_NAME[] = "getbox_cell_controller";
-constexpr char FIRMWARE_VERSION[] = "0.2.0";
+constexpr char FIRMWARE_VERSION[] = "0.5.0";
 
 
 constexpr char BOX_ID[] = "box_001";
@@ -32,3 +32,15 @@ constexpr uint32_t WIFI_RECONNECT_INTERVAL_MS = 10000;
 constexpr uint32_t TIME_SYNC_TIMEOUT_MS = 20000;
 constexpr uint32_t MQTT_RECONNECT_INTERVAL_MS = 5000;
 constexpr uint32_t HEARTBEAT_INTERVAL_MS = 30000;
+
+constexpr uint16_t MQTT_COMMAND_MAX_SIZE = 768;
+
+constexpr uint16_t RELAY_DURATION_MIN_MS = 100;
+constexpr uint16_t RELAY_DURATION_MAX_MS = 3000;
+
+constexpr uint32_t REED_DEBOUNCE_MS = 100;
+constexpr uint32_t DOOR_OPEN_TIMEOUT_MS = 5000;
+constexpr uint32_t DOOR_CLOSE_TIMEOUT_MS = 30000;
+
+constexpr size_t REQUEST_ID_MAX_LENGTH = 64;
+constexpr size_t RECENT_REQUEST_COUNT = 12;

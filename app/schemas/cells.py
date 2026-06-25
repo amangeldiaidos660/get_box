@@ -17,15 +17,15 @@ class CommandHistoryItem(BaseModel):
 
 class OpenCellRequest(CellTargetModel):
     action: Literal["open_cell"] = "open_cell"
-    duration_ms: int = Field(default=1000, ge=100, description="Relay activation time in milliseconds")
+    duration_ms: int = Field(
+        default=1000,
+        ge=100,
+        le=3000,
+        description="Relay activation time in milliseconds",
+    )
 
 
-class CommandStatusUpdateRequest(BaseModel):
-    status: Literal["accepted", "relay_activated", "door_opened", "door_closed", "error"]
-    message: Optional[str] = None
-    error_code: Optional[str] = None
-    door_state: Optional[Literal["open", "closed"]] = None
-    duration_ms: Optional[int] = Field(default=None, ge=100)
+
 
 
 class CommandStatusResponse(CommandIdentityModel):
@@ -47,7 +47,7 @@ class CommandStatusResponse(CommandIdentityModel):
     history: list[CommandHistoryItem] = Field(default_factory=list)
 
 
-class CommandAcceptedResponse(CommandIdentityModel):
-    status: Literal["accepted"] = "accepted"
+class CommandQueuedResponse(CommandIdentityModel):
+    status: Literal["queued"] = "queued"
     action: Literal["open_cell"] = "open_cell"
     duration_ms: int = Field(default=1000, ge=100)

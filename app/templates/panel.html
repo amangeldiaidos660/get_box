@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1"
+    >
+    <title>GetBox Control Panel</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="min-h-screen bg-slate-950 text-slate-100">
+    <main
+    id="getbox-panel"
+    data-box-id="{{ box_id }}"
+    data-controller-id="{{ controller_id }}"
+    class="mx-auto max-w-7xl p-4 md:p-8"
+>
+        <header class="mb-8">
+            <div
+                class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
+            >
+                <div>
+                    <h1 class="text-3xl font-bold">
+                        GetBox Control Panel
+                    </h1>
+
+                    <p class="mt-2 text-slate-400">
+                        Box:
+                        <span class="text-white">{{ box_id }}</span>
+                        · Controller:
+                        <span class="text-white">
+                            {{ controller_id }}
+                        </span>
+                    </p>
+                </div>
+
+                <div class="flex gap-3">
+                    <div
+                        id="mqtt-status"
+                        class="rounded-full bg-slate-800 px-4 py-2 text-sm"
+                    >
+                        MQTT: проверка...
+                    </div>
+
+                    <div
+                        id="controller-status"
+                        class="rounded-full bg-slate-800 px-4 py-2 text-sm"
+                    >
+                        ESP32: проверка...
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <section class="mb-8">
+            <h2 class="mb-4 text-xl font-semibold">
+                Управление ячейками
+            </h2>
+
+            <div
+                class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+            >
+                {% for cell_id in cell_ids %}
+                <article
+                    class="rounded-2xl border border-slate-800 bg-slate-900 p-5 shadow-xl"
+                >
+                    <div
+                        class="flex items-start justify-between"
+                    >
+                        <div>
+                            <p class="text-sm text-slate-400">
+                                Ячейка
+                            </p>
+
+                            <h3 class="text-3xl font-bold">
+                                {{ cell_id }}
+                            </h3>
+                        </div>
+
+                        <span
+                            id="cell-status-{{ cell_id }}"
+                            class="rounded-full bg-slate-800 px-3 py-1 text-xs"
+                        >
+                            нет команд
+                        </span>
+                    </div>
+
+                    <label
+                        class="mt-5 block text-sm text-slate-400"
+                        for="duration-{{ cell_id }}"
+                    >
+                        Импульс реле, ms
+                    </label>
+
+                    <input
+                        id="duration-{{ cell_id }}"
+                        type="number"
+                        min="100"
+                        max="3000"
+                        value="1000"
+                        class="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 outline-none focus:border-blue-500"
+                    >
+
+                    <button
+                        id="open-button-{{ cell_id }}"
+                        type="button"
+                        data-cell-id="{{ cell_id }}"
+                        onclick="openCell(Number(this.dataset.cellId))"
+                        Открыть ячейку
+                    </button>
+
+                    <p
+                        id="cell-request-{{ cell_id }}"
+                        class="mt-3 break-all text-xs text-slate-500"
+                    ></p>
+                </article>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section class="mb-8 grid gap-6 lg:grid-cols-2">
+            <article
+                class="rounded-2xl border border-slate-800 bg-slate-900 p-5"
+            >
+                <h2 class="text-xl font-semibold">
+                    ESP32
+                </h2>
+
+                <dl
+                    id="controller-details"
+                    class="mt-4 grid grid-cols-2 gap-4 text-sm"
+                >
+                    <dt class="text-slate-400">Состояние</dt>
+                    <dd>нет данных</dd>
+                </dl>
+            </article>
+
+            <article
+                class="rounded-2xl border border-slate-800 bg-slate-900 p-5"
+            >
+                <h2 class="text-xl font-semibold">
+                    Последние команды
+                </h2>
+
+                <div
+                    id="commands"
+                    class="mt-4 max-h-80 space-y-3 overflow-auto"
+                ></div>
+            </article>
+        </section>
+
+        <section
+            class="rounded-2xl border border-slate-800 bg-slate-900 p-5"
+        >
+            <div
+                class="flex items-center justify-between"
+            >
+                <h2 class="text-xl font-semibold">
+                    MQTT журнал
+                </h2>
+
+                <span class="text-xs text-slate-500">
+                    обновление каждую секунду
+                </span>
+            </div>
+
+            <div
+                id="events"
+                class="mt-4 max-h-[520px] space-y-3 overflow-auto font-mono text-xs"
+            ></div>
+        </section>
+    </main>
+
+    <script>
+        const panelElement = document.getElementById(
+            "getbox-panel"
+        );
+
+        const boxId = panelElement.dataset.boxId;
+        const controllerId = panelElement.dataset.controllerId;
+
+        function setBadge(element, text, online) {
+            element.textContent = text;
+            element.className =
+                "rounded-full px-4 py-2 text-sm " +
+                (
+                    online
+                        ? "bg-emerald-500/20 text-emerald-300"
+                        : "bg-red-500/20 text-red-300"
+                );
+        }
+
+        function statusClasses(status) {
+            const colors = {
+                queued: "bg-amber-500/20 text-amber-300",
+                accepted: "bg-blue-500/20 text-blue-300",
+                relay_activated:
+                    "bg-violet-500/20 text-violet-300",
+                door_opened:
+                    "bg-orange-500/20 text-orange-300",
+                door_closed:
+                    "bg-emerald-500/20 text-emerald-300",
+                error: "bg-red-500/20 text-red-300",
+            };
+
+            return colors[status]
+                || "bg-slate-800 text-slate-300";
+        }
+
+        async function openCell(cellId) {
+            const button = document.getElementById(
+                `open-button-${cellId}`
+            );
+            const durationInput = document.getElementById(
+                `duration-${cellId}`
+            );
+
+            button.disabled = true;
+            button.textContent = "Отправка...";
+
+            try {
+                const response = await fetch(
+                    "/api/v1/cells/open",
+                    {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                        },
+                        body: JSON.stringify({
+                            action: "open_cell",
+                            box_id: boxId,
+                            controller_id: controllerId,
+                            cell_id: cellId,
+                            duration_ms: Number(
+                                durationInput.value
+                            ),
+                        }),
+                    }
+                );
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(
+                        data.detail || "Ошибка отправки"
+                    );
+                }
+
+                document.getElementById(
+                    `cell-request-${cellId}`
+                ).textContent = data.request_id;
+
+                await loadState();
+            } catch (error) {
+                alert(error.message);
+            } finally {
+                button.disabled = false;
+                button.textContent = "Открыть ячейку";
+            }
+        }
+
+        function renderController(controller) {
+            const status = document.getElementById(
+                "controller-status"
+            );
+
+            setBadge(
+                status,
+                controller.online
+                    ? "ESP32: online"
+                    : "ESP32: offline",
+                controller.online
+            );
+
+            const details = [
+                ["Статус", controller.status || "нет данных"],
+                ["IP", controller.ip || "—"],
+                [
+                    "Uptime",
+                    controller.uptime_sec != null
+                        ? `${controller.uptime_sec} sec`
+                        : "—",
+                ],
+                [
+                    "Free heap",
+                    controller.free_heap != null
+                        ? `${controller.free_heap} bytes`
+                        : "—",
+                ],
+                [
+                    "Firmware",
+                    controller.firmware_version || "—",
+                ],
+                [
+                    "Последний heartbeat",
+                    controller.last_seen_seconds != null
+                        ? `${controller.last_seen_seconds} sec назад`
+                        : "—",
+                ],
+            ];
+
+            const container = document.getElementById(
+                "controller-details"
+            );
+            container.replaceChildren();
+
+            for (const [label, value] of details) {
+                const dt = document.createElement("dt");
+                dt.className = "text-slate-400";
+                dt.textContent = label;
+
+                const dd = document.createElement("dd");
+                dd.textContent = value;
+
+                container.append(dt, dd);
+            }
+        }
+
+        function renderCommands(commands) {
+            const container = document.getElementById(
+                "commands"
+            );
+            container.replaceChildren();
+
+            const latestByCell = new Map();
+
+            for (const command of commands) {
+                if (!latestByCell.has(command.cell_id)) {
+                    latestByCell.set(
+                        command.cell_id,
+                        command
+                    );
+                }
+
+                const item = document.createElement("div");
+                item.className =
+                    "rounded-xl border border-slate-800 bg-slate-950 p-3";
+
+                const header = document.createElement("div");
+                header.className =
+                    "flex items-center justify-between gap-3";
+
+                const title = document.createElement("span");
+                title.textContent =
+                    `Ячейка ${command.cell_id}`;
+
+                const badge = document.createElement("span");
+                badge.className =
+                    "rounded-full px-2 py-1 text-xs " +
+                    statusClasses(command.status);
+                badge.textContent = command.status;
+
+                const request = document.createElement("p");
+                request.className =
+                    "mt-2 break-all text-xs text-slate-500";
+                request.textContent = command.request_id;
+
+                header.append(title, badge);
+                item.append(header, request);
+
+                if (command.error_code) {
+                    const error = document.createElement("p");
+                    error.className =
+                        "mt-2 text-xs text-red-300";
+                    error.textContent = command.error_code;
+                    item.append(error);
+                }
+
+                container.append(item);
+            }
+
+            for (let cellId = 1; cellId <= 6; cellId++) {
+                const badge = document.getElementById(
+                    `cell-status-${cellId}`
+                );
+                const command = latestByCell.get(cellId);
+
+                if (!command) {
+                    badge.textContent = "нет команд";
+                    badge.className =
+                        "rounded-full bg-slate-800 px-3 py-1 text-xs";
+                    continue;
+                }
+
+                badge.textContent = command.status;
+                badge.className =
+                    "rounded-full px-3 py-1 text-xs " +
+                    statusClasses(command.status);
+
+                document.getElementById(
+                    `cell-request-${cellId}`
+                ).textContent = command.request_id;
+            }
+        }
+
+        function renderEvents(events) {
+            const container = document.getElementById(
+                "events"
+            );
+            container.replaceChildren();
+
+            for (const event of events.slice(0, 80)) {
+                const item = document.createElement("div");
+                item.className =
+                    "rounded-xl border border-slate-800 bg-slate-950 p-3";
+
+                const direction = document.createElement("span");
+                direction.className =
+                    event.direction === "in"
+                        ? "text-emerald-300"
+                        : "text-blue-300";
+                direction.textContent =
+                    event.direction === "in" ? "IN" : "OUT";
+
+                const topic = document.createElement("span");
+                topic.className =
+                    "ml-3 break-all text-slate-300";
+                topic.textContent = event.topic;
+
+                const payload = document.createElement("pre");
+                payload.className =
+                    "mt-2 whitespace-pre-wrap break-all text-slate-500";
+                payload.textContent = JSON.stringify(
+                    event.payload,
+                    null,
+                    2
+                );
+
+                item.append(direction, topic, payload);
+                container.append(item);
+            }
+        }
+
+        async function loadState() {
+            try {
+                const response = await fetch(
+                    "/api/v1/panel/state",
+                    {cache: "no-store"}
+                );
+
+                if (!response.ok) {
+                    throw new Error("State request failed");
+                }
+
+                const state = await response.json();
+
+                setBadge(
+                    document.getElementById("mqtt-status"),
+                    state.mqtt_connected
+                        ? "MQTT: connected"
+                        : "MQTT: disconnected",
+                    state.mqtt_connected
+                );
+
+                renderController(state.controller || {});
+                renderCommands(state.commands || []);
+                renderEvents(state.events || []);
+            } catch (error) {
+                setBadge(
+                    document.getElementById("mqtt-status"),
+                    "MQTT: ошибка панели",
+                    false
+                );
+            }
+        }
+
+        loadState();
+        setInterval(loadState, 1000);
+    </script>
+</body>
+</html>

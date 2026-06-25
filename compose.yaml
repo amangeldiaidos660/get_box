@@ -14,6 +14,11 @@ services:
       MQTT_USERNAME: ${MQTT_API_USERNAME:-getbox_api}
       MQTT_PASSWORD_FILE: /run/secrets/mqtt_api_password
       MQTT_TLS_ENABLED: "false"
+      MQTT_CLIENT_ID: getbox_api_server
+      
+      GETBOX_BOX_ID: ${MQTT_BOX_ID:-box_001}
+      GETBOX_CONTROLLER_ID: ${MQTT_CONTROLLER_ID:-ctrl_01}
+      GETBOX_CELL_COUNT: 6
 
     ports:
       - "${API_PORT:-8000}:8000"

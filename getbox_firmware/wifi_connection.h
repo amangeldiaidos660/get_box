@@ -5,7 +5,7 @@
 #include <time.h>
 
 #include "firmware_variables.h"
-#include "wifi_connection.h"
+
 
 inline bool isSystemTimeValid() {
     return time(nullptr) > 1700000000;
@@ -59,17 +59,23 @@ inline bool ensureWiFiConnection() {
 
     if (
         lastReconnectAttemptAt != 0
-        && now - lastReconnectAttemptAt < WIFI_RECONNECT_INTERVAL_MS
+        && now - lastReconnectAttemptAt
+            < WIFI_RECONNECT_INTERVAL_MS
     ) {
         return false;
     }
 
     lastReconnectAttemptAt = now;
 
-    Serial.println("Wi-Fi disconnected. Reconnecting...");
+    Serial.println(
+        "Wi-Fi disconnected. Starting reconnect..."
+    );
 
     WiFi.disconnect();
-    return connectToWiFi();
+    WiFi.mode(WIFI_STA);
+    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+
+    return false;
 }
 
 inline bool synchronizeSystemTime() {

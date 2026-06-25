@@ -5,9 +5,11 @@
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
 
+#include "command_handler.h"
 #include "firmware_variables.h"
 #include "mqtt_ca_certificate.h"
 #include "mqtt_topics.h"
+#include "wifi_connection.h"
 
 inline WiFiClientSecure mqttSecureClient;
 inline PubSubClient mqttClient(mqttSecureClient);
@@ -43,6 +45,17 @@ inline void mqttMessageCallback(
     }
 
     Serial.println();
+
+    if (commandTopic() != topic) {
+        Serial.println("Ignored message from unexpected topic");
+        return;
+    }
+
+    handleOpenCellCommand(
+        mqttClient,
+        payload,
+        length
+    );
 }
 
 inline bool publishHeartbeat(bool retained = false) {

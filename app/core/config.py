@@ -33,6 +33,13 @@ class Settings(BaseModel):
     app_name: str = os.getenv("APP_NAME", "GetBox API")
     api_prefix: str = os.getenv("API_PREFIX", "/api/v1")
 
+    box_id: str = os.getenv("GETBOX_BOX_ID", "box_001")
+    controller_id: str = os.getenv(
+        "GETBOX_CONTROLLER_ID",
+        "ctrl_01",
+    )
+    cell_count: int = int(os.getenv("GETBOX_CELL_COUNT", "6"))
+
     command_timeout_seconds: int = int(
         os.getenv("COMMAND_TIMEOUT_SECONDS", "30")
     )
@@ -48,6 +55,10 @@ class Settings(BaseModel):
 
     mqtt_host: str = os.getenv("MQTT_HOST", "localhost")
     mqtt_port: int = int(os.getenv("MQTT_PORT", "1883"))
+    mqtt_client_id: str = os.getenv(
+        "MQTT_CLIENT_ID",
+        "getbox_api_server",
+    )
     mqtt_username: Optional[str] = os.getenv("MQTT_USERNAME")
     mqtt_password: Optional[str] = read_secret(
         "MQTT_PASSWORD",

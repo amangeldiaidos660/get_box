@@ -130,6 +130,25 @@ class CommandStore:
                 return None
             self._evaluate_timeouts(record)
             return record
+        
+    def list_recent(
+        self,
+        limit: int = 20,
+    ) -> list[dict[str, object]]:
+        with self._lock:
+            records = sorted(
+                self._commands.values(),
+                key=lambda item: item.created_at,
+                reverse=True,
+            )
+
+            for record in records:
+                self._evaluate_timeouts(record)
+
+            return [
+                record.snapshot()
+                for record in records[:limit]
+            ]
 
     def update_status(
         self,

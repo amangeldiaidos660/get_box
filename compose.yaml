@@ -1,0 +1,98 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+
+    environment:
+      APP_NAME: ${APP_NAME:-GetBox API}
+      API_PREFIX: ${API_PREFIX:-/api/v1}
+
+      MQTT_HOST: mqtt
+      MQTT_PORT: 1883
+      MQTT_USERNAME: ${MQTT_API_USERNAME:-getbox_api}
+      MQTT_PASSWORD_FILE: /run/secrets/mqtt_api_password
+      MQTT_TLS_ENABLED: "false"
+
+    ports:
+      - "${API_PORT:-8000}:8000"
+
+    secrets:
+      - mqtt_api_password
+
+    depends_on:
+      mqtt:
+        condition: service_healthy
+
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health', timeout=3)"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+    networks:
+      - getbox
+
+  mqtt:
+    build:
+      context: ./docker/mosquitto
+      dockerfile: Dockerfile
+    restart: unless-stopped
+
+    environment:
+      MQTT_API_USERNAME: ${MQTT_API_USERNAME:-getbox_api}
+      MQTT_DEVICE_USERNAME: ${MQTT_DEVICE_USERNAME:-ctrl_01}
+      MQTT_BOX_ID: ${MQTT_BOX_ID:-box_001}
+      MQTT_CONTROLLER_ID: ${MQTT_CONTROLLER_ID:-ctrl_01}
+
+    ports:
+      - "${MQTT_TLS_PORT:-8883}:8883"
+
+    expose:
+      - "1883"
+
+    secrets:
+      - mqtt_api_password
+      - mqtt_device_password
+
+    volumes:
+      - mqtt_data:/mosquitto/data
+      - mqtt_logs:/mosquitto/log
+      - ./docker/mosquitto/certs:/mosquitto/certs:ro
+
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "mosquitto_pub -h 127.0.0.1 -p 1883 -u \"$${MQTT_API_USERNAME}\" -P \"$$(cat /run/secrets/mqtt_api_password)\" -t 'getbox/system/health' -m 'ok'"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+    networks:
+      - getbox
+
+networks:
+  getbox:
+    driver: bridge
+
+volumes:
+  mqtt_data:
+  mqtt_logs:
+
+secrets:
+  mqtt_api_password:
+    file: ./secrets/mqtt_api_password.txt
+
+  mqtt_device_password:
+    file: ./secrets/mqtt_device_password.txt

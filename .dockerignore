@@ -1,0 +1,12 @@
+.git
+.gitignore
+.env
+.venv
+venv
+__pycache__
+*.py[cod]
+*.log
+docs
+getbox_firmware
+secrets
+docker/mosquitto/certs

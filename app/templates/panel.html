@@ -105,12 +105,14 @@
                     >
 
                     <button
-                        id="open-button-{{ cell_id }}"
-                        type="button"
-                        data-cell-id="{{ cell_id }}"
-                        onclick="openCell(Number(this.dataset.cellId))"
-                        Открыть ячейку
-                    </button>
+    id="open-button-{{ cell_id }}"
+    type="button"
+    data-cell-id="{{ cell_id }}"
+    onclick="openCell(Number(this.dataset.cellId))"
+    class="mt-4 w-full rounded-xl bg-blue-600 px-4 py-3 font-semibold transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+>
+    Открыть ячейку
+</button>
 
                     <p
                         id="cell-request-{{ cell_id }}"

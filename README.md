@@ -93,3 +93,72 @@ docker/mosquitto/certs/privkey.pem
 ```
 
 Эти файлы не отправляются в Git.
+
+
+
+## Server deployment
+
+Тестовое серверное окружение GetBox развёрнуто 25 июня 2026 года.
+
+### Server information
+
+```text
+Public IP: 91.243.71.86
+Project directory: /opt/getbox
+Git branch: main
+Compose command: docker-compose
+```
+
+На сервере используется отдельный бинарный `docker-compose`. Команда `docker compose` на текущем сервере недоступна.
+
+### Published services
+
+| Service | Address | Purpose |
+|---|---|---|
+| FastAPI | `http://91.243.71.86:8010` | HTTP API GetBox |
+| Mosquitto | `91.243.71.86:8883` | Публичный MQTT через TLS |
+| Internal MQTT | `mqtt:1883` | Связь FastAPI с Mosquitto внутри Docker |
+
+Порт `1883` не опубликован на сервере. ESP32 подключается к публичному IP на порт `8883`.
+
+### Current controller configuration
+
+```text
+box_id: box_001
+controller_id: ctrl_01
+MQTT device username: ctrl_01
+MQTT API username: getbox_api
+```
+
+Пользователь `ctrl_01` имеет право:
+
+- читать команды только из `getbox/box_001/cell/ctrl_01/cmd`;
+- публиковать статусы в `getbox/box_001/cell/ctrl_01/status`;
+- публиковать события в `getbox/box_001/cell/ctrl_01/event`;
+- публиковать heartbeat в `getbox/box_001/device/ctrl_01/heartbeat`;
+- публиковать ошибки в `getbox/box_001/device/ctrl_01/error`.
+
+Контроллер не может публиковать сообщения в собственный командный topic. Это ограничение проверено через MQTT ACL.
+
+### Server files
+
+```text
+/opt/getbox/.env
+/opt/getbox/secrets/mqtt_api_password.txt
+/opt/getbox/secrets/mqtt_device_password.txt
+/opt/getbox/docker/mosquitto/certs/ca.crt
+/opt/getbox/docker/mosquitto/certs/fullchain.pem
+/opt/getbox/docker/mosquitto/certs/privkey.pem
+```
+
+Пароли, закрытые ключи, сертификаты сервера и серверный `.env` не хранятся в Git.
+
+### PKI files
+
+Исходные файлы собственного центра сертификации находятся только на сервере:
+
+```text
+/root/getbox-pki/ca.key
+/root/getbox-pki/ca.crt
+/root/getbox-pki/server.key
+/root/getbox-pki/server

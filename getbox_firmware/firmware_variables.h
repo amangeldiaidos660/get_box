@@ -10,4 +10,25 @@ constexpr char WIFI_PASSWORD[] = "ILoveAlmaU2024!";
 
 // Optional firmware metadata.
 constexpr char DEVICE_NAME[] = "getbox_cell_controller";
-constexpr char FIRMWARE_VERSION[] = "0.1.0";
+constexpr char FIRMWARE_VERSION[] = "0.2.0";
+
+
+constexpr char BOX_ID[] = "box_001";
+constexpr char CONTROLLER_ID[] = "ctrl_01";
+
+constexpr char MQTT_HOST[] = "91.243.71.86";
+constexpr uint16_t MQTT_PORT = 8883;
+constexpr char MQTT_USERNAME[] = "ctrl_01";
+constexpr char MQTT_PASSWORD[] = "fLh+hkxTFMVeqUcHaFJtBF+iOzrVIrgmwmD1OtRBMQo=";
+
+
+constexpr char MQTT_CLIENT_ID[] = "getbox_box_001_ctrl_01";
+
+constexpr char NTP_SERVER_1[] = "pool.ntp.org";
+constexpr char NTP_SERVER_2[] = "time.google.com";
+
+constexpr uint32_t WIFI_CONNECTION_TIMEOUT_MS = 20000;
+constexpr uint32_t WIFI_RECONNECT_INTERVAL_MS = 10000;
+constexpr uint32_t TIME_SYNC_TIMEOUT_MS = 20000;
+constexpr uint32_t MQTT_RECONNECT_INTERVAL_MS = 5000;
+constexpr uint32_t HEARTBEAT_INTERVAL_MS = 30000;
